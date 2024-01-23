@@ -143,7 +143,7 @@ def train_and_evaluate_model(result_df):
 
     # Choose a classification algorithm (Logistic Regression)
     # model = LogisticRegression(class_weight = 'balanced')
-    model = LogisticRegression(class_weight = 'balanced')
+    model = LogisticRegression()
 
 
     # Train the model
@@ -160,27 +160,6 @@ def train_and_evaluate_model(result_df):
     recall = recall_score(y_test, y_pred)
     f1 = f1_score(y_test, y_pred)
     roc_auc = roc_auc_score(y_test, model.predict_proba(X_test_normalized)[:, 1])
-
-    feature_importances = model.coef_[0]
-
-    # Create a DataFrame with feature names and their importances
-    importance_df = pd.DataFrame({'Feature': X_train.columns, 'Importance': feature_importances})
-
-    # Sort the DataFrame by absolute importance values
-    importance_df['Absolute Importance'] = importance_df['Importance'].abs()
-    importance_df = importance_df.sort_values(by='Absolute Importance', ascending=False)
-
-    # Print or visualize the feature importances
-    print(importance_df)
-
-    # Plot the feature importances
-    plt.figure(figsize=(10, 6))
-    plt.barh(importance_df['Feature'], importance_df['Absolute Importance'])
-    plt.xlabel('Absolute Importance')
-    plt.title('Feature Importances in Logistic Regression')
-    plt.show()
-    
-
 
     return model, accuracy, precision, recall, f1, roc_auc
 
@@ -231,25 +210,6 @@ def train_and_evaluate_random_forest(result_df):
     recall = recall_score(y_test, y_pred)
     f1 = f1_score(y_test, y_pred)
     roc_auc = roc_auc_score(y_test, model.predict_proba(X_test)[:, 1])
-
-    # Get feature importances
-    feature_importances = model.feature_importances_
-
-    # Create a DataFrame with feature names and their importances
-    importance_df = pd.DataFrame({'Feature': X_train.columns, 'Importance': feature_importances})
-
-    # Sort the DataFrame by importance values
-    importance_df = importance_df.sort_values(by='Importance', ascending=False)
-
-    # Print or visualize the feature importances
-    print(importance_df)
-
-    # Plot the feature importances
-    plt.figure(figsize=(10, 6))
-    plt.barh(importance_df['Feature'], importance_df['Importance'])
-    plt.xlabel('Importance')
-    plt.title('Feature Importances in Random Forest')
-    plt.show()
 
     return model, accuracy, precision, recall, f1, roc_auc
 
@@ -400,7 +360,7 @@ def collect_results(events_data, subscribers_data, start_date_for_train, date_to
 
 if __name__ == "__main__":
     start_date_for_train = datetime(2015, 9, 11) # start of relevant data to train
-    date_to_predict = datetime(2021, 9, 9) 
+    date_to_predict = datetime(2021, 7, 9) 
     events_data, subscribers_data = load_and_preprocess_data()
     results, model = collect_results(events_data, subscribers_data, start_date_for_train, date_to_predict)
 
