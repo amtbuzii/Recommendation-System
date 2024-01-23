@@ -57,13 +57,14 @@ def filter_events_by_date(events_data, specific_date, duration):
 
     return filtered_df_backward, filtered_df_forward, members_in_week
 
+
 def create_result_df(filtered_df, filtered_df_forward, unique_members, event_types):
     """
     Create a DataFrame with event type counts for each member (create features).
 
     Args:
     filtered_df (pd.DataFrame): Filtered DataFrame.
-    unique_members (numpy.ndarray): Unique member IDs.
+    unique_members (numpy.ndarray): Unique member IDs. (week forward)
     event_types (list): List of event types.
 
     Returns:
@@ -75,10 +76,33 @@ def create_result_df(filtered_df, filtered_df_forward, unique_members, event_typ
         event_count = filtered_df[filtered_df['event_type'] == event_type].groupby('member_id').size()
         result_df[f'{event_type}_count'] = result_df.index.map(event_count).fillna(0)
 
+        # Count for the first, second, and third months
+        if event_type == 'usage':
+            for month in range(1, 4):
+                month_start = filtered_df['dt'].max() - timedelta(days=(month - 1) * 30)
+                month_end = filtered_df['dt'].max() - timedelta(days=month * 30)
+
+                event_count_month = filtered_df[
+                    (filtered_df['event_type'] == event_type) &
+                    (filtered_df['dt'] >= month_start) &
+                    (filtered_df['dt'] <= month_end)
+                ].groupby('member_id').size()
+
+                result_df[f'{event_type}_count_month_{month}'] = result_df.index.map(event_count_month).fillna(0)
+
+            # Calculate minimum and maximum intervals between usages
+            events_data_usage = filtered_df[filtered_df['event_type'] == 'usage'].copy()
+            events_data_usage.sort_values(by=['member_id', 'dt'], inplace=True)
+            events_data_usage['time_diff'] = events_data_usage.groupby('member_id')['dt'].diff().dt.days
+            min_interval = events_data_usage.groupby('member_id')['time_diff'].min().fillna(0).astype(int)
+            max_interval = events_data_usage.groupby('member_id')['time_diff'].max().fillna(0).astype(int)
+
+            result_df['minimum_interval'] = result_df.index.map(min_interval).fillna(0)
+            result_df['maximum_interval'] = result_df.index.map(max_interval).fillna(0)
+
     # Calculate if a member had a pt_sale event in the next week (1 for yes, 0 for no)
     pt_sale_count = filtered_df_forward[filtered_df_forward['event_type'] == 'pt_sale'].groupby('member_id').size()
     result_df['pt_sale'] = (result_df.index.map(pt_sale_count).fillna(0) > 0).astype(int)
-
     return result_df
 
 def train_and_evaluate_model(result_df):
@@ -137,6 +161,26 @@ def train_and_evaluate_model(result_df):
     f1 = f1_score(y_test, y_pred)
     roc_auc = roc_auc_score(y_test, model.predict_proba(X_test_normalized)[:, 1])
 
+    feature_importances = model.coef_[0]
+
+    # Create a DataFrame with feature names and their importances
+    importance_df = pd.DataFrame({'Feature': X_train.columns, 'Importance': feature_importances})
+
+    # Sort the DataFrame by absolute importance values
+    importance_df['Absolute Importance'] = importance_df['Importance'].abs()
+    importance_df = importance_df.sort_values(by='Absolute Importance', ascending=False)
+
+    # Print or visualize the feature importances
+    print(importance_df)
+
+    # Plot the feature importances
+    plt.figure(figsize=(10, 6))
+    plt.barh(importance_df['Feature'], importance_df['Absolute Importance'])
+    plt.xlabel('Absolute Importance')
+    plt.title('Feature Importances in Logistic Regression')
+    plt.show()
+    
+
 
     return model, accuracy, precision, recall, f1, roc_auc
 
@@ -188,6 +232,24 @@ def train_and_evaluate_random_forest(result_df):
     f1 = f1_score(y_test, y_pred)
     roc_auc = roc_auc_score(y_test, model.predict_proba(X_test)[:, 1])
 
+    # Get feature importances
+    feature_importances = model.feature_importances_
+
+    # Create a DataFrame with feature names and their importances
+    importance_df = pd.DataFrame({'Feature': X_train.columns, 'Importance': feature_importances})
+
+    # Sort the DataFrame by importance values
+    importance_df = importance_df.sort_values(by='Importance', ascending=False)
+
+    # Print or visualize the feature importances
+    print(importance_df)
+
+    # Plot the feature importances
+    plt.figure(figsize=(10, 6))
+    plt.barh(importance_df['Feature'], importance_df['Importance'])
+    plt.xlabel('Importance')
+    plt.title('Feature Importances in Random Forest')
+    plt.show()
 
     return model, accuracy, precision, recall, f1, roc_auc
 
@@ -290,7 +352,7 @@ def collect_results(events_data, subscribers_data, start_date_for_train, date_to
     
     combine_result_dt = []
 
-    for i in range(350): # all relevnt dates in events_data 
+    for i in range(375): # all relevnt dates in events_data 
         date_to_collect = start_date_for_train + timedelta(days=6*i)
         filtered_df, filtered_df_forward, unique_members_in_week = filter_events_by_date(events_data, date_to_collect, timedelta(days=duration_in_days))
         result_df = create_result_df(filtered_df, filtered_df_forward, unique_members_in_week, event_types)
@@ -299,7 +361,7 @@ def collect_results(events_data, subscribers_data, start_date_for_train, date_to
     combine_result_dt = pd.concat(combine_result_dt)
 
     model, accuracy, precision, recall, f1, roc_auc = train_and_evaluate_model(combine_result_dt)
-    #model, accuracy, precision, recall, f1, roc_auc = train_and_evaluate_random_forest(combine_result_dt)
+    # model, accuracy, precision, recall, f1, roc_auc = train_and_evaluate_random_forest(combine_result_dt)
     subscribers_data_for_date, top_10_predictions = make_predictions(model, combine_result_dt, subscribers_data, date_to_predict)
 
     #  generate_top_10_by_segment(subscribers_data_for_date)
@@ -338,10 +400,10 @@ def collect_results(events_data, subscribers_data, start_date_for_train, date_to
 
 if __name__ == "__main__":
     start_date_for_train = datetime(2015, 9, 11) # start of relevant data to train
-    date_to_predict = datetime(2021, 7, 9) 
+    date_to_predict = datetime(2021, 9, 9) 
     events_data, subscribers_data = load_and_preprocess_data()
     results, model = collect_results(events_data, subscribers_data, start_date_for_train, date_to_predict)
-    
+
     for key, value in results.items():
         print("------------------------")
         print(f"{key}: {value}")
