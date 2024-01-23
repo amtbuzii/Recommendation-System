@@ -97,8 +97,8 @@ def create_result_df(filtered_df, filtered_df_forward, unique_members, event_typ
             min_interval = events_data_usage.groupby('member_id')['time_diff'].min().fillna(0).astype(int)
             max_interval = events_data_usage.groupby('member_id')['time_diff'].max().fillna(0).astype(int)
 
-            result_df['minimum_interval'] = result_df.index.map(min_interval).fillna(0)
-            result_df['maximum_interval'] = result_df.index.map(max_interval).fillna(0)
+            # result_df['minimum_interval'] = result_df.index.map(min_interval).fillna(0)
+            # result_df['maximum_interval'] = result_df.index.map(max_interval).fillna(0)
 
     # Calculate if a member had a pt_sale event in the next week (1 for yes, 0 for no)
     pt_sale_count = filtered_df_forward[filtered_df_forward['event_type'] == 'pt_sale'].groupby('member_id').size()
@@ -324,16 +324,14 @@ def collect_results(events_data, subscribers_data, start_date_for_train, date_to
     # model, accuracy, precision, recall, f1, roc_auc = train_and_evaluate_random_forest(combine_result_dt)
     subscribers_data_for_date, top_10_predictions = make_predictions(model, combine_result_dt, subscribers_data, date_to_predict)
 
-    #  generate_top_10_by_segment(subscribers_data_for_date)
+    generate_top_10_by_segment(subscribers_data_for_date)
 
     top_10_predictions['success'] = False
     # Check success for each member in top 10 predictions
     for idx in top_10_predictions.index:
         top_10_predictions.loc[idx, 'success'] = check_success(idx, date_to_predict, events_data)
 
-    print(top_10_predictions)
     top_10_true =  top_10_predictions['success'].sum()
-    print("Number of top_10_true:", top_10_true)
     
     # Check all members that buy pt_sale:
     members_in_week = events_data[(events_data['dt'] >= date_to_predict) & (events_data['dt'] <= (date_to_predict+timedelta(days=6)))]['member_id']
@@ -342,7 +340,6 @@ def collect_results(events_data, subscribers_data, start_date_for_train, date_to
     all_possible_true = evente_week_forward[evente_week_forward['event_type'] == 'pt_sale'].groupby('member_id').size()
     all_possible_true = (all_possible_true.index.map(all_possible_true).fillna(0) > 0).astype(int).sum()
     
-    print("Number of all_possible_true:", all_possible_true )
     # Store relevant information for comparison
     results = {
     'model': model,
