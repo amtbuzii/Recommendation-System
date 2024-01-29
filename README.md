@@ -68,7 +68,7 @@ To use the script:
 
 The script prints relevant metrics such as accuracy, precision, recall, F1 score, and ROC-AUC for the logistic regression model. It also provides precision@k and recall@k for the top 10 predictions.
 
-**Note:** The script currently focuses on logistic regression, but there's also an option to use a random forest classifier (commented out).
+**Note:** The script currently focuses on logistic regression, but there's also an option to use a random forest / SVM classifier (commented out).
 
 Feel free to explore and adapt the script based on your specific requirements.
 
