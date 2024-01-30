@@ -391,7 +391,30 @@ def check_success(member_id, date_to_predict, events_data):
 
 def collect_results(events_data, subscribers_data, start_date_for_train, date_to_predict, duration_in_days = 90, weeks_to_train = 50, model_type=1):
     """
-    model_type : 1 = logistic regression, 2 = RandomForest
+    Train and evaluate a predictive model to identify potential customers for a specific date.
+
+    Args:
+        events_data (pd.DataFrame): DataFrame containing events data, including member_id, event_type, and dt (date).
+        subscribers_data (pd.DataFrame): DataFrame containing subscribers' data, including member_id and additional features.
+        start_date_for_train (datetime): The starting date for training the model.
+        date_to_predict (datetime): The specific date for which predictions are generated.
+        duration_in_days (int, optional): The duration of the training period in days. Defaults to 90.
+        weeks_to_train (int, optional): The number of weeks to train the model. Defaults to 50.
+        model_type (int, optional): Model type selection (1 for logistic regression, 2 for random forest). Defaults to 1.
+
+    Returns:
+        results (dict): A dictionary containing model evaluation metrics.
+            - 'model': Trained model.
+            - 'accuracy': Accuracy of the model on the test set.
+            - 'precision': Precision of the model on the test set.
+            - 'recall': Recall of the model on the test set.
+            - 'f1': F1 score of the model on the test set.
+            - 'roc_auc': Area under the ROC curve.
+            - 'precision@k': Precision at top-k members.
+            - 'recall@k': Recall at top-k members.
+
+        model (object): Trained machine learning model.
+
     """
 
     combine_result_dt = []
