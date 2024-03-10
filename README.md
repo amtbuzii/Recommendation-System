@@ -1,4 +1,3 @@
-# Vi labs - Data Scientist - Home Assignment
 
 # Predictive Model for Personal Training Sales (Recommendation System)
 
